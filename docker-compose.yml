@@ -1,0 +1,125 @@
+version: '3.8'
+
+networks:
+  workchat:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: EmailDomainsDb, PersonalDataDb, EmployeesDb
+    ports:
+      - "5432:5432"
+    networks:
+      - workchat
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+
+  wc-service-registration:
+    image: saintefim/wc-service-registration:latest
+    container_name: wc.service.registration.api
+    ports:
+      - "1001:1001"
+    depends_on:
+      - wc-service-emaildomains
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:1001 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Services__employees=http://wc-service-employees:2003
+      - Services__authentication=http://wc-service-authentication:2005
+    networks:
+      - workchat
+    restart: on-failure
+
+  wc-service-emaildomains:
+    image: saintefim/wc-service-emaildomains:latest
+    container_name: wc.service.emaildomains.api
+    ports:
+      - "1002:1002"
+      - "2002:2002"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__ServiceDB=Host=postgres;Database=EmailDomainsDb;Username=postgres;Password=1234
+    networks:
+      - workchat
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:1002 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+
+  wc-service-employees:
+    image: saintefim/wc-service-employees:latest
+    container_name: wc.service.employees.api
+    ports:
+      - "1003:1003"
+      - "2003:2003"
+    depends_on:
+      - postgres
+      - wc-service-personaldata
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Services_personal-data: http://wc-service-personaldata:2004
+      ConnectionStrings__ServiceDB: "Host=postgres;Database=EmployeesDb;Username=postgres;Password=1234"
+    networks:
+      - workchat
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:1003 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+
+  wc-service-personaldata:
+    image: saintefim/wc-service-personaldata:latest
+    container_name: wc.service.personaldata
+    ports:
+      - "1004:1004"
+      - "2004:2004"
+    depends_on:
+      - postgres
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__ServiceDB: "Host=postgres;Database=PersonalDataDb;Username=postgres;Password=1234"
+      Services__email-domains: http://wc-service-emaildomains:2002
+    networks:
+      - workchat
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:1004 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+
+  wc-service-authentication:
+    image: saintefim/wc-service-authentication:latest
+    container_name: wc.service.authentication.api
+    ports:
+      - "1005:1005"
+      - "2005:2005"
+    depends_on:
+      - postgres
+      - wc-service-personaldata
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Services_personal-data: http://wc-service-personaldata:2004
+    networks:
+      - workchat
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:1005 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
