@@ -23,7 +23,7 @@ services:
     restart: on-failure
 
   wc-service-registration:
-    image: saintefim/wc-service-registration:latest
+    image: saintefim/wc-service-registration:1.0.0
     container_name: wc.service.registration.api
     ports:
       - "1001:1001"
@@ -43,7 +43,7 @@ services:
     restart: on-failure
 
   wc-service-emaildomains:
-    image: saintefim/wc-service-emaildomains:latest
+    image: saintefim/wc-service-emaildomains:1.0.0
     container_name: wc.service.emaildomains.api
     ports:
       - "1002:1002"
@@ -61,7 +61,7 @@ services:
     restart: on-failure
 
   wc-service-employees:
-    image: saintefim/wc-service-employees:latest
+    image: saintefim/wc-service-employees:1.0.0
     container_name: wc.service.employees.api
     ports:
       - "1003:1003"
@@ -83,7 +83,7 @@ services:
     restart: on-failure
 
   wc-service-personaldata:
-    image: saintefim/wc-service-personaldata:latest
+    image: saintefim/wc-service-personaldata:1.0.0
     container_name: wc.service.personaldata
     ports:
       - "1004:1004"
@@ -104,7 +104,7 @@ services:
     restart: on-failure
 
   wc-service-authentication:
-    image: saintefim/wc-service-authentication:latest
+    image: saintefim/wc-service-authentication:1.0.0
     container_name: wc.service.authentication.api
     ports:
       - "1005:1005"
