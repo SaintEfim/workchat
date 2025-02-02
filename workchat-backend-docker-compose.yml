@@ -174,7 +174,6 @@ services:
     networks:
       - workchat
     command: [ "dotnet", "WC.Service.EmailDomains.CreateDomain.dll" ]
-    restart: "no"
 
   wc-service-employees-createposition:
     image: saintefim/wc-service-employees-createposition:latest
@@ -192,25 +191,34 @@ services:
     networks:
       - workchat
     command: [ "dotnet", "WC.Service.Employees.CreatePosition.dll" ]
-    restart: "no"
-    
+
   wc-service-registration-createadmin:
     image: saintefim/wc-service-registration-createadmin:latest
     container_name: wc.service.registration.createadmin
     depends_on:
-      - postgres
-      - wc-service-registration
-      - wc-service-emaildomains
-      - wc-service-employees
-      - wc-service-personaldata
-      - wc-service-authentication
       - wc-service-emaildomains-createdomain
       - wc-service-employees-createposition
     environment:
       <<: [ *common-admin-env, *common-env ]
       Services__employees: http://wc-service-employees:2003
       Services__authentication: http://wc-service-authentication:2005
+      WithAuthentication: true
     networks:
       - workchat
     command: [ "dotnet", "WC.Service.Registration.CreateAdmin.dll" ]
-    restart: "on-failure"
+
+  wc-service-authentication-authorizationadmin:
+    image: saintefim/wc-service-authentication-authorizationadmin:latest
+    container_name: wc-service-authentication-authorizationadmin
+    depends_on:
+      - wc-service-emaildomains-createdomain
+      - wc-service-employees-createposition
+      - wc-service-registration-createadmin
+    environment:
+      <<: [ *common-admin-env, *common-env ]
+      Services_personal-data: http://wc-service-personaldata:2004
+      WithAuthentication: true
+    networks:
+      - workchat
+    command: [ "dotnet", "WC.Service.Authentication.AuthorizationAdmin.dll" ]
+
