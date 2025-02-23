@@ -4,40 +4,6 @@ networks:
   workchat:
     driver: bridge
 
-x-environment:
-  common-env: &common-env
-    ASPNETCORE_ENVIRONMENT: Development
-    # ASPNETCORE_ENVIRONMENT - текущая среда ASP.NET (Development, Production, etc.)
-
-  common-admin-env: &common-admin-env
-    ADMIN_EMAIL_DOMAIN: admin.com
-    # Обязательно должен совпадать с тем, что есть в EMAIL_DOMAINS
-    ADMIN_EMAIL_LOCAL_PART: admin
-    ADMIN_REGISTRATION_PASSWORD: Admin@12345678
-    ADMIN_POSITION_ID: 00000000-0000-0000-0000-000000000001
-    ADMIN_POSITION_NAME: Администратор
-    # Обязательно должен совпадать с тем, что есть в POSITION_NAMES
-    ADMIN_REGISTRATION_NAME: Админ
-    ADMIN_REGISTRATION_SURNAME: Админ
-    ADMIN_REGISTRATION_PATRONYMIC:
-      # Описание переменных:
-      # ADMIN_EMAIL_DOMAIN - домен для электронной почты
-      # ADMIN_EMAIL_LOCAL_PART - локальная часть email администратора
-      # ADMIN_REGISTRATION_PASSWORD - пароль администратора
-      # ADMIN_POSITION_ID - ID позиции администратора
-      # ADMIN_POSITION_NAME - название позиции администратора
-      # ADMIN_REGISTRATION_NAME - имя администратора
-      # ADMIN_REGISTRATION_SURNAME - фамилия администратора
-      # ADMIN_REGISTRATION_PATRONYMIC - отчество администратора
-
-  common-domain-env: &common-domain-env
-    EMAIL_DOMAINS: "admin.com, example.com, mydomain.com"
-    # Домены, которые мы хотим, чтобы были на старте
-
-  common-position-env: &common-position-env
-    POSITION_NAMES: "Администратор, Пользователь"
-    # Позиции, которые мы хотим, чтобы они были на старте
-
 services:
   postgres:
     image: postgres:latest
@@ -51,29 +17,9 @@ services:
       - workchat
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "postgres" ]
-      interval: 10s
-      timeout: 5s
+      interval: 5s
+      timeout: 3s
       retries: 5
-    restart: on-failure
-
-  wc-service-registration:
-    image: saintefim/wc-service-registration:latest
-    container_name: wc.service.registration.api
-    ports:
-      - "1001:1001"
-    depends_on:
-      - wc-service-emaildomains
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:1001 || exit 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    environment:
-      <<: *common-env
-      Services__employees: http://wc-service-employees:2003
-      Services__authentication: http://wc-service-authentication:2005
-    networks:
-      - workchat
     restart: on-failure
 
   wc-service-emaildomains:
@@ -82,17 +28,23 @@ services:
     ports:
       - "1002:1002"
       - "2002:2002"
-    environment:
-      <<: *common-env
-      Services_personal-data: http://wc-service-personaldata:2004
-      ConnectionStrings__ServiceDB: Host=postgres;Database=EmailDomainsDb;Username=postgres;Password=1234
+    depends_on:
+      postgres:
+        condition: service_healthy  # Ждём готовности БД
     networks:
       - workchat
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:1002 || exit 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    restart: on-failure
+
+  wc-service-registration:
+    image: saintefim/wc-service-registration:latest
+    container_name: wc.service.registration.api
+    ports:
+      - "1001:1001"
+    depends_on:
+      wc-service-emaildomains:
+        condition: service_started
+    networks:
+      - workchat
     restart: on-failure
 
   wc-service-employees:
@@ -102,19 +54,10 @@ services:
       - "1003:1003"
       - "2003:2003"
     depends_on:
-      - postgres
-      - wc-service-personaldata
-    environment:
-      <<: *common-env
-      Services_personal-data: http://wc-service-personaldata:2004
-      ConnectionStrings__ServiceDB: "Host=postgres;Database=EmployeesDb;Username=postgres;Password=1234"
+      wc-service-emaildomains:
+        condition: service_started
     networks:
       - workchat
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:1003 || exit 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: on-failure
 
   wc-service-personaldata:
@@ -124,18 +67,10 @@ services:
       - "1004:1004"
       - "2004:2004"
     depends_on:
-      - postgres
-    environment:
-      <<: *common-env
-      ConnectionStrings__ServiceDB: "Host=postgres;Database=PersonalDataDb;Username=postgres;Password=1234"
-      Services__email-domains: http://wc-service-emaildomains:2002
+      wc-service-employees:
+        condition: service_started
     networks:
       - workchat
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:1004 || exit 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: on-failure
 
   wc-service-authentication:
@@ -145,80 +80,47 @@ services:
       - "1005:1005"
       - "2005:2005"
     depends_on:
-      - postgres
-      - wc-service-personaldata
-    environment:
-      <<: *common-env
-      Services_personal-data: http://wc-service-personaldata:2004
+      wc-service-personaldata:
+        condition: service_started
     networks:
       - workchat
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:1005 || exit 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: on-failure
 
+  # --- ОТДЕЛЬНЫЙ БЛОК ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО ЗАПУСКА 4 КОНТЕЙНЕРОВ ---
+  
   wc-service-emaildomains-createdomain:
     image: saintefim/wc-service-emaildomains-createdomain:latest
     container_name: wc.service.emaildomains.createdomain
     depends_on:
-      - postgres
-      - wc-service-registration
-      - wc-service-emaildomains
-      - wc-service-employees
-      - wc-service-personaldata
-      - wc-service-authentication
-    environment:
-      <<: [ *common-domain-env, *common-env ]
+      wc-service-authentication:
+        condition: service_started  # Ждём, пока ВСЕ основные сервисы запустятся
     networks:
       - workchat
-    command: [ "dotnet", "WC.Service.EmailDomains.CreateDomain.dll" ]
 
   wc-service-employees-createposition:
     image: saintefim/wc-service-employees-createposition:latest
-    container_name: wc.service.employees-createposition
+    container_name: wc.service.employees.createposition
     depends_on:
-      - postgres
-      - wc-service-registration
-      - wc-service-emaildomains
-      - wc-service-employees
-      - wc-service-personaldata
-      - wc-service-authentication
-    environment:
-      <<: [ *common-admin-env, *common-position-env, *common-env ]
-      Services_personal-data: http://wc-service-personaldata:2004
+      wc-service-emaildomains-createdomain:
+        condition: service_started
     networks:
       - workchat
-    command: [ "dotnet", "WC.Service.Employees.CreatePosition.dll" ]
 
   wc-service-registration-createadmin:
     image: saintefim/wc-service-registration-createadmin:latest
     container_name: wc.service.registration.createadmin
     depends_on:
-      - wc-service-emaildomains-createdomain
-      - wc-service-employees-createposition
-    environment:
-      <<: [ *common-admin-env, *common-env ]
-      Services__employees: http://wc-service-employees:2003
-      Services__authentication: http://wc-service-authentication:2005
-      WithAuthentication: true
+      wc-service-employees-createposition:
+        condition: service_started
     networks:
       - workchat
-    command: [ "dotnet", "WC.Service.Registration.CreateAdmin.dll" ]
 
   wc-service-authentication-authorizationadmin:
     image: saintefim/wc-service-authentication-authorizationadmin:latest
-    container_name: wc-service-authentication-authorizationadmin
+    container_name: wc.service.authentication.authorizationadmin
     depends_on:
-      - wc-service-emaildomains-createdomain
-      - wc-service-employees-createposition
-      - wc-service-registration-createadmin
-    environment:
-      <<: [ *common-admin-env, *common-env ]
-      Services_personal-data: http://wc-service-personaldata:2004
-      WithAuthentication: true
+      wc-service-registration-createadmin:
+        condition: service_started
     networks:
       - workchat
-    command: [ "dotnet", "WC.Service.Authentication.AuthorizationAdmin.dll" ]
-
+    restart: on-failure
