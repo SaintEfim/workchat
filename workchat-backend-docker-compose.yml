@@ -1,8 +1,40 @@
-version: '3.8'
-
 networks:
   workchat:
     driver: bridge
+
+x-environment:
+  common-env: &common-env
+    ASPNETCORE_ENVIRONMENT: Development
+    # ASPNETCORE_ENVIRONMENT - текущая среда ASP.NET (Development, Production, etc.)
+
+  common-admin-env: &common-admin-env
+    ADMIN_EMAIL_DOMAIN: admin.com
+    # Обязательно должен совпадать с тем, что есть в EMAIL_DOMAINS
+    ADMIN_EMAIL_LOCAL_PART: admin
+    ADMIN_REGISTRATION_PASSWORD: Admin@12345678
+    ADMIN_POSITION_ID: 00000000-0000-0000-0000-000000000001
+    ADMIN_POSITION_NAME: Администратор
+    # Обязательно должен совпадать с тем, что есть в POSITION_NAMES
+    ADMIN_REGISTRATION_NAME: Админ
+    ADMIN_REGISTRATION_SURNAME: Админ
+    ADMIN_REGISTRATION_PATRONYMIC:
+      # Описание переменных:
+      # ADMIN_EMAIL_DOMAIN - домен для электронной почты
+      # ADMIN_EMAIL_LOCAL_PART - локальная часть email администратора
+      # ADMIN_REGISTRATION_PASSWORD - пароль администратора
+      # ADMIN_POSITION_ID - ID позиции администратора
+      # ADMIN_POSITION_NAME - название позиции администратора
+      # ADMIN_REGISTRATION_NAME - имя администратора
+      # ADMIN_REGISTRATION_SURNAME - фамилия администратора
+      # ADMIN_REGISTRATION_PATRONYMIC - отчество администратора
+
+  common-domain-env: &common-domain-env
+    EMAIL_DOMAINS: "admin.com, example.com, mydomain.com"
+    # Домены, которые мы хотим, чтобы были на старте
+
+  common-position-env: &common-position-env
+    POSITION_NAMES: "Администратор, Пользователь"
+    # Позиции, которые мы хотим, чтобы они были на старте
 
 services:
   postgres:
@@ -22,6 +54,22 @@ services:
       retries: 5
     restart: on-failure
 
+  wc-service-registration:
+    image: saintefim/wc-service-registration:latest
+    container_name: wc.service.registration.api
+    ports:
+      - "1001:1001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      Services__employees: http://wc-service-employees:2003
+      Services__authentication: http://wc-service-authentication:2005
+    networks:
+      - workchat
+    restart: on-failure
+
   wc-service-emaildomains:
     image: saintefim/wc-service-emaildomains:latest
     container_name: wc.service.emaildomains.api
@@ -29,20 +77,12 @@ services:
       - "1002:1002"
       - "2002:2002"
     depends_on:
-      postgres:
-        condition: service_healthy  # Ждём готовности БД
-    networks:
-      - workchat
-    restart: on-failure
-
-  wc-service-registration:
-    image: saintefim/wc-service-registration:latest
-    container_name: wc.service.registration.api
-    ports:
-      - "1001:1001"
-    depends_on:
-      wc-service-emaildomains:
+      wc-service-registration:
         condition: service_started
+    environment:
+      <<: *common-env
+      Services_personal-data: http://wc-service-personaldata:2004
+      ConnectionStrings__ServiceDB: Host=postgres;Database=EmailDomainsDb;Username=postgres;Password=1234
     networks:
       - workchat
     restart: on-failure
@@ -56,6 +96,10 @@ services:
     depends_on:
       wc-service-emaildomains:
         condition: service_started
+    environment:
+      <<: *common-env
+      Services_personal-data: http://wc-service-personaldata:2004
+      ConnectionStrings__ServiceDB: "Host=postgres;Database=EmployeesDb;Username=postgres;Password=1234"
     networks:
       - workchat
     restart: on-failure
@@ -69,6 +113,10 @@ services:
     depends_on:
       wc-service-employees:
         condition: service_started
+    environment:
+      <<: *common-env
+      ConnectionStrings__ServiceDB: "Host=postgres;Database=PersonalDataDb;Username=postgres;Password=1234"
+      Services__email-domains: http://wc-service-emaildomains:2002
     networks:
       - workchat
     restart: on-failure
@@ -82,6 +130,9 @@ services:
     depends_on:
       wc-service-personaldata:
         condition: service_started
+    environment:
+      <<: *common-env
+      Services_personal-data: http://wc-service-personaldata:2004
     networks:
       - workchat
     restart: on-failure
@@ -93,7 +144,9 @@ services:
     container_name: wc.service.emaildomains.createdomain
     depends_on:
       wc-service-authentication:
-        condition: service_started  # Ждём, пока ВСЕ основные сервисы запустятся
+        condition: service_started
+    environment:
+      <<: [ *common-domain-env, *common-env ]
     networks:
       - workchat
 
@@ -103,6 +156,9 @@ services:
     depends_on:
       wc-service-emaildomains-createdomain:
         condition: service_started
+    environment:
+      <<: [ *common-admin-env, *common-position-env, *common-env ]
+      Services_personal-data: http://wc-service.personaldata:2004
     networks:
       - workchat
 
@@ -112,6 +168,10 @@ services:
     depends_on:
       wc-service-employees-createposition:
         condition: service_started
+    environment:
+      <<: [ *common-admin-env, *common-env ]
+      Services__employees: http://wc-service-employees:2003
+      Services__authentication: http://wc-service-authentication:2005
     networks:
       - workchat
 
@@ -121,6 +181,9 @@ services:
     depends_on:
       wc-service-registration-createadmin:
         condition: service_started
+    environment:
+      <<: [ *common-admin-env, *common-env ]
+      Services_personal-data: http://wc-service.personaldata:2004
     networks:
       - workchat
     restart: on-failure
