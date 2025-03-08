@@ -28,9 +28,10 @@ x-environment:
       # ADMIN_REGISTRATION_SURNAME - фамилия администратора
       # ADMIN_REGISTRATION_PATRONYMIC - отчество администратора
 
-  common-domain-env: &common-domain-env
-    EMAIL_DOMAINS: "admin.com, example.com, mydomain.com"
-    # Домены, которые мы хотим, чтобы были на старте
+  common-domain-env: &common-domain-env 
+    EmailDomains__Domains__0: "admin.com"
+    EmailDomains__Domains__1: "example.com"
+    EmailDomains__Domains__2: "mydomain.com"
 
   common-position-env: &common-position-env
     POSITION_NAMES: "Администратор, Пользователь"
@@ -138,7 +139,7 @@ services:
     restart: on-failure
 
   # --- ОТДЕЛЬНЫЙ БЛОК ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО ЗАПУСКА 4 КОНТЕЙНЕРОВ ---
-  
+
   wc-service-emaildomains-createdomain:
     image: saintefim/wc-service-emaildomains-createdomain:latest
     container_name: wc.service.emaildomains.createdomain
