@@ -1,41 +1,36 @@
+version: '3.8'
+
 networks:
   workchat:
     driver: bridge
 
 x-environment:
+  # Общие настройки для всех сервисов
   common-env: &common-env
     ASPNETCORE_ENVIRONMENT: Development
-    # ASPNETCORE_ENVIRONMENT - текущая среда ASP.NET (Development, Production, etc.)
 
+  # Настройки для админских сервисов
   common-admin-env: &common-admin-env
-    ADMIN_EMAIL_DOMAIN: admin.com
-    # Обязательно должен совпадать с тем, что есть в EMAIL_DOMAINS
-    ADMIN_EMAIL_LOCAL_PART: admin
-    ADMIN_REGISTRATION_PASSWORD: Admin@12345678
-    ADMIN_POSITION_ID: 00000000-0000-0000-0000-000000000001
-    ADMIN_POSITION_NAME: Администратор
-    # Обязательно должен совпадать с тем, что есть в POSITION_NAMES
-    ADMIN_REGISTRATION_NAME: Админ
-    ADMIN_REGISTRATION_SURNAME: Админ
-    ADMIN_REGISTRATION_PATRONYMIC:
-      # Описание переменных:
-      # ADMIN_EMAIL_DOMAIN - домен для электронной почты
-      # ADMIN_EMAIL_LOCAL_PART - локальная часть email администратора
-      # ADMIN_REGISTRATION_PASSWORD - пароль администратора
-      # ADMIN_POSITION_ID - ID позиции администратора
-      # ADMIN_POSITION_NAME - название позиции администратора
-      # ADMIN_REGISTRATION_NAME - имя администратора
-      # ADMIN_REGISTRATION_SURNAME - фамилия администратора
-      # ADMIN_REGISTRATION_PATRONYMIC - отчество администратора
+    AdminSettings__AdminEmailLocalPart: "admin"
+    AdminSettings__AdminEmailDomain: "admin.com"
+    AdminSettings__AdminRegistrationPassword: "Admin@12345678"
+    AdminSettings__AdminPositionId: "00000000-0000-0000-0000-000000000001"
+    AdminSettings__AdminRegistrationName: "Админ"
+    AdminSettings__AdminRegistrationSurname: "Админ"
+    AdminSettings__AdminRegistrationPatronymic: "Админович"
 
-  common-domain-env: &common-domain-env 
-    EmailDomains__Domains__0: "admin.com"
-    EmailDomains__Domains__1: "example.com"
-    EmailDomains__Domains__2: "mydomain.com"
+  # Настройки для доменных сервисов (например, email домены)
+  common-domain-env: &common-domain-env
+    AdminSettings__EmailDomains__0: "admin.com"
+    AdminSettings__EmailDomains__1: "example.com"
+    AdminSettings__EmailDomains__2: "mydomain.com"
 
+  # Настройки для позиций (используются для создания позиций пользователей)
   common-position-env: &common-position-env
-    POSITION_NAMES: "Администратор, Пользователь"
-    # Позиции, которые мы хотим, чтобы они были на старте
+    AdminSettings__PositionNames__0: "Администратор"
+    AdminSettings__PositionNames__1: "Пользователь"
+    AdminSettings__PositionNames__2: "Менеджер"
+    AdminSettings__AdminPositionId: "00000000-0000-0000-0000-000000000001"
 
 services:
   postgres:
@@ -138,7 +133,7 @@ services:
       - workchat
     restart: on-failure
 
-  # --- ОТДЕЛЬНЫЙ БЛОК ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО ЗАПУСКА 4 КОНТЕЙНЕРОВ ---
+  # --- Отдельный блок для последовательного запуска сервисов ---
 
   wc-service-emaildomains-createdomain:
     image: saintefim/wc-service-emaildomains-createdomain:latest
