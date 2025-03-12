@@ -1,0 +1,18 @@
+EnvironmentVariables:
+  Environment: "development"
+Server:
+  Addr: "0.0.0.0"
+  Port: "1007"
+  Timeout: 5
+Logs:
+  Path: ""
+  Level: info
+  MaxAge: 1
+  MaxBackups: 4
+GRPCClient:
+  Services:
+      chats: "0.0.0.0:2006"
+Cors:
+  AllowedOrigins:
+    - "http://localhost:4200"
+

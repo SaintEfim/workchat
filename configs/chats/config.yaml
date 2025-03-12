@@ -1,0 +1,24 @@
+HTTPServer:
+  Addr: "0.0.0.0"
+  Port: "1006"
+EnvironmentVariables:
+  Environment: "development"
+DataBase:
+  ConnectionString: "postgres://postgres:1234@postgres:5432/ChatsDb?sslmode=disable"
+  ConnectionPostgres: "postgres://postgres:1234@postgres:5432/postgres?sslmode=disable"
+  Name: "ChatsDb"
+GRPCClient:
+  Services:
+    employees: "0.0.0.0:2003"
+GRPCServer:
+  Type: "tcp"
+  Addr: ":2006"
+Logs:
+  Path: ""
+  Level: info
+  MaxAge: 1
+  MaxBackups: 4
+Cors:
+  "AllowedOrigins": [
+    "http://localhost:4200"
+  ]

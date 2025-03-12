@@ -38,7 +38,7 @@ services:
     container_name: postgres
     environment:
       POSTGRES_PASSWORD: 1234
-      POSTGRES_DB: EmailDomainsDb, PersonalDataDb, EmployeesDb
+      POSTGRES_DB: ChatsDb
     ports:
       - "5432:5432"
     networks:
@@ -133,13 +133,43 @@ services:
       - workchat
     restart: on-failure
 
+  chats-service:
+    image: saintefim/chats-service:latest
+    container_name: chats-service
+    ports:
+      - "1006:1006"
+      - "2006:2006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./configs/chats/config.yaml:/app/config/config.yaml:ro
+    networks:
+      - workchat
+    restart: on-failure
+
+  messages-service:
+    image: saintefim/messages-service:latest
+    container_name: messages-service
+    ports:
+      - "1007:1007"
+      - "2007:2007"
+    depends_on:
+      chats-service:
+        condition: service_started
+    volumes:
+      - ./configs/messages/config.yaml:/app/config/config.yaml:ro
+    networks:
+      - workchat
+    restart: on-failure
+
   # --- Отдельный блок для последовательного запуска сервисов ---
 
   wc-service-emaildomains-createdomain:
     image: saintefim/wc-service-emaildomains-createdomain:latest
     container_name: wc.service.emaildomains.createdomain
     depends_on:
-      wc-service-authentication:
+      chats-service:
         condition: service_started
     environment:
       <<: [ *common-domain-env, *common-env ]
