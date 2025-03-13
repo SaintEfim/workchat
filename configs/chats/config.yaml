@@ -1,11 +1,12 @@
 HTTPServer:
   Addr: "0.0.0.0"
   Port: "1006"
+  Timeout: 5
 EnvironmentVariables:
   Environment: "development"
 DataBase:
-  ConnectionString: "postgres://postgres:1234@postgres:5432/ChatsDb?sslmode=disable"
-  ConnectionPostgres: "postgres://postgres:1234@postgres:5432/postgres?sslmode=disable"
+  ConnectionString: "postgres://postgres:1234@localhost/ChatsDb?sslmode=disable"
+  ConnectionPostgres: "postgres://postgres:1234@localhost:5432/postgres?sslmode=disable"
   Name: "ChatsDb"
 GRPCClient:
   Services:
@@ -22,3 +23,5 @@ Cors:
   "AllowedOrigins": [
     "http://localhost:4200"
   ]
+AuthenticationConfiguration:
+  AccessSecretKey: "tM+Lm9iti8KzwHNeHXVzQrIcMm8GNIFjf73UiZpKnP4="
