@@ -56,8 +56,7 @@ services:
     ports:
       - "1001:1001"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     environment:
       <<: *common-env
       Services__employees: http://wc-service-employees:2003
@@ -73,8 +72,7 @@ services:
       - "1002:1002"
       - "2002:2002"
     depends_on:
-      wc-service-registration:
-        condition: service_started
+      - wc-service-registration
     environment:
       <<: *common-env
       Services_personal-data: http://wc-service-personaldata:2004
@@ -90,8 +88,7 @@ services:
       - "1003:1003"
       - "2003:2003"
     depends_on:
-      wc-service-emaildomains:
-        condition: service_started
+      - wc-service-emaildomains
     environment:
       <<: *common-env
       Services_personal-data: http://wc-service-personaldata:2004
@@ -107,8 +104,7 @@ services:
       - "1004:1004"
       - "2004:2004"
     depends_on:
-      wc-service-employees:
-        condition: service_started
+      - wc-service-employees
     environment:
       <<: *common-env
       ConnectionStrings__ServiceDB: "Host=postgres;Database=PersonalDataDb;Username=postgres;Password=1234"
@@ -124,8 +120,7 @@ services:
       - "1005:1005"
       - "2005:2005"
     depends_on:
-      wc-service-personaldata:
-        condition: service_started
+      - wc-service-personaldata
     environment:
       <<: *common-env
       Services_personal-data: http://wc-service-personaldata:2004
@@ -140,8 +135,7 @@ services:
       - "1006:1006"
       - "2006:2006"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     volumes:
       - ./configs/chats/config.yaml:/app/config/config.yaml:ro
     networks:
@@ -155,22 +149,18 @@ services:
       - "1007:1007"
       - "2007:2007"
     depends_on:
-      chats-service:
-        condition: service_started
+      - chats-service
     volumes:
       - ./configs/messages/config.yaml:/app/config/config.yaml:ro
     networks:
       - workchat
     restart: on-failure
 
-  # --- Отдельный блок для последовательного запуска сервисов ---
-
   wc-service-emaildomains-createdomain:
     image: saintefim/wc-service-emaildomains-createdomain:latest
     container_name: wc.service.emaildomains.createdomain
     depends_on:
-      chats-service:
-        condition: service_started
+      - chats-service
     environment:
       <<: [ *common-domain-env, *common-env ]
     networks:
@@ -180,11 +170,10 @@ services:
     image: saintefim/wc-service-employees-createposition:latest
     container_name: wc.service.employees.createposition
     depends_on:
-      wc-service-emaildomains-createdomain:
-        condition: service_started
+      - wc-service-emaildomains-createdomain
     environment:
       <<: [ *common-admin-env, *common-position-env, *common-env ]
-      Services_personal-data: http://wc-service.personaldata:2004
+      Services_personal-data: http://wc-service-personaldata:2004
     networks:
       - workchat
 
@@ -192,8 +181,7 @@ services:
     image: saintefim/wc-service-registration-createadmin:latest
     container_name: wc.service.registration.createadmin
     depends_on:
-      wc-service-employees-createposition:
-        condition: service_started
+      - wc-service-employees-createposition
     environment:
       <<: [ *common-admin-env, *common-env ]
       Services__employees: http://wc-service-employees:2003
@@ -205,11 +193,10 @@ services:
     image: saintefim/wc-service-authentication-authorizationadmin:latest
     container_name: wc.service.authentication.authorizationadmin
     depends_on:
-      wc-service-registration-createadmin:
-        condition: service_started
+      - wc-service-registration-createadmin
     environment:
       <<: [ *common-admin-env, *common-env ]
-      Services_personal-data: http://wc-service.personaldata:2004
+      Services_personal-data: http://wc-service-personaldata:2004
     networks:
       - workchat
     restart: on-failure
