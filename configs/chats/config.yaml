@@ -5,8 +5,8 @@ HTTPServer:
 EnvironmentVariables:
   Environment: "development"
 DataBase:
-  ConnectionString: "postgres://postgres:1234@localhost/ChatsDb?sslmode=disable"
-  ConnectionPostgres: "postgres://postgres:1234@localhost:5432/postgres?sslmode=disable"
+  ConnectionString: "postgres://postgres:1234@postgres/ChatsDb?sslmode=disable"
+  ConnectionPostgres: "postgres://postgres:1234@postgres:5432/postgres?sslmode=disable"
   Name: "ChatsDb"
 GRPCClient:
   Services:
