@@ -4,6 +4,10 @@ $ErrorActionPreference = "Stop"
 # Define the path to your docker-compose file
 $composeFile = ".\workchat-backend-docker-compose.yml"
 
+# Pull docker-compose
+docker-compose -f $composeFile pull
+Start-Sleap -Second 1
+
 # Start postgres
 docker-compose -f $composeFile up -d postgres
 Write-Output "Started postgres, waiting 1 seconds..."
