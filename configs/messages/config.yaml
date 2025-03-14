@@ -13,8 +13,9 @@ GRPCClient:
   Services:
       chats: "chats-service:2006"
 Cors:
-  AllowedOrigins:
-    - "http://localhost:4200"
+  AllowedOrigins: [
+    "http://localhost:4200"
+  ]
 AuthenticationConfiguration:
   AccessSecretKey: "tM+Lm9iti8KzwHNeHXVzQrIcMm8GNIFjf73UiZpKnP4="
 

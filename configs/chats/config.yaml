@@ -20,7 +20,7 @@ Logs:
   MaxAge: 1
   MaxBackups: 4
 Cors:
-  "AllowedOrigins": [
+  AllowedOrigins: [
     "http://localhost:4200"
   ]
 AuthenticationConfiguration:

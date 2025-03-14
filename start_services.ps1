@@ -78,5 +78,5 @@ Write-Output "Press Enter to stop all docker-compose services..."
 [System.Console]::ReadLine() | Out-Null
 
 # Stop docker-compose services
-docker-compose -f $composeFile down
+docker-compose -f $composeFile stop
 Write-Output "Docker-compose services have been stopped."
