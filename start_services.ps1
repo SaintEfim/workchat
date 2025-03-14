@@ -6,7 +6,7 @@ $composeFile = ".\workchat-backend-docker-compose.yml"
 
 # Pull docker-compose
 docker-compose -f $composeFile pull
-Start-Sleap -Second 1
+Start-Sleep -Second 1
 
 # Start postgres
 docker-compose -f $composeFile up -d postgres
