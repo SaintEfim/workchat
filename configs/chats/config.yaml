@@ -10,7 +10,7 @@ DataBase:
   Name: "ChatsDb"
 GRPCClient:
   Services:
-    employees: "0.0.0.0:2003"
+    employees: "wc-service-employees:2003"
 GRPCServer:
   Type: "tcp"
   Addr: ":2006"

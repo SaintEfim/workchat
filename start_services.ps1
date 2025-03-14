@@ -8,6 +8,10 @@ $composeFile = ".\workchat-backend-docker-compose.yml"
 docker-compose -f $composeFile pull
 Start-Sleep -Second 1
 
+# Build docker-compose
+docker-compose -f $composeFile build
+Start-Sleep -Second 1
+
 # Start postgres
 docker-compose -f $composeFile up -d postgres
 Write-Output "Started postgres, waiting 1 seconds..."
