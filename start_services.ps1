@@ -2,7 +2,7 @@
 $ErrorActionPreference = "Stop"
 
 # Запрос IP и установка переменной
-$externalIp = Read-Host "Введите ваш внешний IP (например 193.123.12.12)"
+$externalIp = Read-Host "Write IP, please (example 193.123.12.12)"
 $env:EXTERNAL_ORIGIN = "http://${externalIp}:4200"
 
 # Создание временного .env файла
