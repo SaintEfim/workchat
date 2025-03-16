@@ -1,32 +1,75 @@
 # Stop execution on errors
 $ErrorActionPreference = "Stop"
 
-# Запрос IP и установка переменной
-$externalIp = Read-Host "Write IP, please (example 193.123.12.12)"
+# Function to get the system's IP address
+function Get-SystemIP {
+    # Get all IPv4 addresses, excluding loopback and inactive interfaces
+    $networkAdapters = Get-NetIPAddress -AddressFamily IPv4 | 
+                       Where-Object { $_.InterfaceAlias -notmatch "Loopback" -and $_.PrefixOrigin -eq "Dhcp" }
+
+    if ($networkAdapters) {
+        # Return the first found IPv4 address
+        return $networkAdapters[0].IPAddress
+    }
+
+    # If no DHCP address is found, look for any IPv4 address (excluding loopback)
+    $fallbackAdapters = Get-NetIPAddress -AddressFamily IPv4 | 
+                        Where-Object { $_.InterfaceAlias -notmatch "Loopback" }
+
+    if ($fallbackAdapters) {
+        return $fallbackAdapters[0].IPAddress
+    }
+
+    # If nothing is found, return localhost
+    return "127.0.0.1"
+}
+
+# Function to validate an IP address
+function Test-ValidIP {
+    param([string]$ip)
+    return $ip -match '^\d{1,3}(\.\d{1,3}){3}$'
+}
+
+# Get the system's default IP address
+$defaultIP = Get-SystemIP
+Write-Output "Detected system IP: $defaultIP"
+
+# Prompt for IP with validation
+do {
+    $externalIp = Read-Host "Enter IP (default is $defaultIP, press Enter to use it)"
+    if ([string]::IsNullOrEmpty($externalIp)) {
+        $externalIp = $defaultIP
+    }
+    if (-not (Test-ValidIP $externalIp)) {
+        Write-Warning "Invalid IP address. Please enter a valid IPv4 address."
+    }
+} until (Test-ValidIP $externalIp)
+
+# Set the environment variable
 $env:EXTERNAL_ORIGIN = "http://${externalIp}:4200"
 
-# Пути к конфигурационным файлам
+# Paths to configuration files
 $configFiles = @(
     ".\configs\chats\config.yaml",
     ".\configs\messages\config.yaml"
 )
 
-# Обновление конфигурационных файлов
+# Update configuration files
 foreach ($configFile in $configFiles) {
     if (Test-Path $configFile) {
         try {
-            # Создаем бэкап файла
+            # Create a backup of the file
             $backupFile = "$configFile.bak"
             Copy-Item $configFile $backupFile -Force
             
-            # Читаем и изменяем содержимое
+            # Read and modify the content
             $content = Get-Content $configFile -Raw
             $pattern = '(AllowedOrigins:\s*\[)[^\]]*'
             $replacement = "`$1`"$env:EXTERNAL_ORIGIN`", `"http://localhost:4200`""
             
             $newContent = $content -replace $pattern, $replacement
             
-            # Проверяем что изменения применились
+            # Verify that changes were applied
             if ($newContent -ne $content) {
                 Set-Content $configFile -Value $newContent
                 Write-Output "Updated CORS in $configFile"
@@ -37,7 +80,7 @@ foreach ($configFile in $configFiles) {
         }
         catch {
             Write-Error "Failed to update $configFile : $_"
-            # Восстанавливаем файл из бэкапа при ошибке
+            # Restore the file from backup in case of error
             if (Test-Path $backupFile) {
                 Copy-Item $backupFile $configFile -Force
             }
@@ -49,7 +92,7 @@ foreach ($configFile in $configFiles) {
     }
 }
 
-# Создание временного .env файла
+# Create a temporary .env file
 $envContent = @"
 EXTERNAL_ORIGIN=${env:EXTERNAL_ORIGIN}
 "@
@@ -113,13 +156,13 @@ try {
     Write-Output "`nAll services have been started with CORS for: $env:EXTERNAL_ORIGIN"
 }
 finally {
-    # Удаление временного .env файла
+    # Remove the temporary .env file
     if (Test-Path .\.env) {
         Remove-Item -Path .\.env -Force
         Write-Output "Temporary .env file removed."
     }
     
-    # Очистка бэкапов конфигов
+    # Clean up config backups
     foreach ($configFile in $configFiles) {
         $backupFile = "$configFile.bak"
         if (Test-Path $backupFile) {
