@@ -1,10 +1,14 @@
-version: '3.8'
-
 networks:
   workchat:
     driver: bridge
 
 x-environment:
+  # Общие CORS настройки
+  common-cors-env: &common-cors-env
+    Cors__AllowedOrigins__0: "http://workchat-client:4200"
+    Cors__AllowedOrigins__1: "${EXTERNAL_ORIGIN:-http://localhost:4200}"
+    Cors__AllowedOrigins__2: "http://localhost:4200"
+
   # Общие настройки для всех сервисов
   common-env: &common-env
     ASPNETCORE_ENVIRONMENT: Development
@@ -58,7 +62,7 @@ services:
     depends_on:
       - postgres
     environment:
-      <<: *common-env
+      <<: [*common-env, *common-cors-env]
       Services__employees: http://wc-service-employees:2003
       Services__authentication: http://wc-service-authentication:2005
     networks:
@@ -74,7 +78,7 @@ services:
     depends_on:
       - wc-service-registration
     environment:
-      <<: *common-env
+      <<: [*common-env, *common-cors-env]
       Services_personal-data: http://wc-service-personaldata:2004
       ConnectionStrings__ServiceDB: Host=postgres;Database=EmailDomainsDb;Username=postgres;Password=1234
     networks:
@@ -90,7 +94,7 @@ services:
     depends_on:
       - wc-service-emaildomains
     environment:
-      <<: *common-env
+      <<: [*common-env, *common-cors-env]
       Services_personal-data: http://wc-service-personaldata:2004
       ConnectionStrings__ServiceDB: "Host=postgres;Database=EmployeesDb;Username=postgres;Password=1234"
     networks:
@@ -106,7 +110,7 @@ services:
     depends_on:
       - wc-service-employees
     environment:
-      <<: *common-env
+      <<: [*common-env, *common-cors-env]
       ConnectionStrings__ServiceDB: "Host=postgres;Database=PersonalDataDb;Username=postgres;Password=1234"
       Services__email-domains: http://wc-service-emaildomains:2002
     networks:
@@ -122,7 +126,7 @@ services:
     depends_on:
       - wc-service-personaldata
     environment:
-      <<: *common-env
+      <<: [*common-env, *common-cors-env]
       Services_personal-data: http://wc-service-personaldata:2004
     networks:
       - workchat

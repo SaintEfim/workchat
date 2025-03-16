@@ -1,0 +1,15 @@
+networks:
+  workchat:
+    driver: bridge
+
+services:
+  workchat-client:
+    image: saintefim/workchat-client-js:latest 
+    container_name: workchat-client-js
+    ports:
+      - "4200:4200"
+    environment:
+      - NODE_ENV=production
+    restart: always
+    networks:
+      - workchat

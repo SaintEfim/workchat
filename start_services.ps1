@@ -1,82 +1,85 @@
 # Stop execution on errors
 $ErrorActionPreference = "Stop"
 
-# Define the path to your docker-compose file
-$composeFile = ".\workchat-backend-docker-compose.yml"
+# Запрос IP и установка переменной
+$externalIp = Read-Host "Введите ваш внешний IP (например 193.123.12.12)"
+$env:EXTERNAL_ORIGIN = "http://${externalIp}:4200"
 
-# Pull docker-compose images
-docker-compose -f $composeFile pull
-Start-Sleep -Seconds 1
+# Создание временного .env файла
+$envContent = @"
+EXTERNAL_ORIGIN=${env:EXTERNAL_ORIGIN}
+"@
+Set-Content -Path .\.env -Value $envContent
 
-# Build docker-compose images
-docker-compose -f $composeFile build
-Start-Sleep -Seconds 1
+$composeBackendFile = ".\workchat-backend-docker-compose.yml"
+$composeFrontendFile = ".\workchat-frontend-docker-compose.yml"
 
-# Start postgres
-docker-compose -f $composeFile up -d postgres
-Write-Output "Started postgres, waiting 1 second..."
-Start-Sleep -Seconds 1
+function Start-Service {
+    param(
+        [string]$composeFile,
+        [string]$serviceName
+    )
+    docker-compose -f $composeFile up -d $serviceName
+    Write-Output "Started $serviceName, waiting 1 second..."
+    Start-Sleep -Seconds 1
+}
 
-# Start wc-service-registration
-docker-compose -f $composeFile up -d wc-service-registration
-Write-Output "Started wc-service-registration, waiting 1 second..."
-Start-Sleep -Seconds 1
 
-# Start wc-service-emaildomains
-docker-compose -f $composeFile up -d wc-service-emaildomains
-Write-Output "Started wc-service-emaildomains, waiting 1 second..."
-Start-Sleep -Seconds 1
+try {
+    Write-Output "Processing backend services..."
+    $backendServices = @(
+        "postgres",
+        "wc-service-registration",
+        "wc-service-emaildomains", 
+        "wc-service-employees",
+        "wc-service-personaldata",
+        "wc-service-authentication",
+        "chats-service",
+        "messages-service",
+        "wc-service-emaildomains-createdomain",
+        "wc-service-employees-createposition",
+        "wc-service-registration-createadmin",
+        "wc-service-authentication-authorizationadmin"
+    )
 
-# Start wc-service-employees
-docker-compose -f $composeFile up -d wc-service-employees
-Write-Output "Started wc-service-employees, waiting 1 second..."
-Start-Sleep -Seconds 1
+    Write-Output "Pulling backend images..."
+    docker-compose -f $composeBackendFile pull
+    
+    Write-Output "Building backend images..."
+    docker-compose -f $composeBackendFile build
 
-# Start wc-service-personaldata
-docker-compose -f $composeFile up -d wc-service-personaldata
-Write-Output "Started wc-service-personaldata, waiting 1 second..."
-Start-Sleep -Seconds 1
+    foreach ($service in $backendServices) {
+        Start-Service -composeFile $composeBackendFile -serviceName $service
+    }
 
-# Start wc-service-authentication
-docker-compose -f $composeFile up -d wc-service-authentication
-Write-Output "Started wc-service-authentication, waiting 1 second..."
-Start-Sleep -Seconds 1
+    Write-Output "`nProcessing frontend services..."
+    $frontendServices = @(
+        "workchat-client"
+    )
 
-# Start chats-service
-docker-compose -f $composeFile up -d chats-service
-Write-Output "Started chats-service, waiting 1 second..."
-Start-Sleep -Seconds 1
+    Write-Output "Pulling frontend images..."
+    docker-compose -f $composeFrontendFile pull
+    
+    Write-Output "Building frontend images..."
+    docker-compose -f $composeFrontendFile build
 
-# Start messages-service
-docker-compose -f $composeFile up -d messages-service
-Write-Output "Started messages-service, waiting 1 second..."
-Start-Sleep -Seconds 1
+    foreach ($service in $frontendServices) {
+        Start-Service -composeFile $composeFrontendFile -serviceName $service
+    }
 
-# Start wc-service-emaildomains-createdomain
-docker-compose -f $composeFile up -d wc-service-emaildomains-createdomain
-Write-Output "Started wc-service-emaildomains-createdomain, waiting 1 second..."
-Start-Sleep -Seconds 1
+    Write-Output "`nAll services have been started with CORS for: $env:EXTERNAL_ORIGIN"
+}
+finally {
+    if (Test-Path .\.env) {
+        Remove-Item -Path .\.env -Force
+        Write-Output "Temporary .env file removed."
+    }
+}
 
-# Start wc-service-employees-createposition
-docker-compose -f $composeFile up -d wc-service-employees-createposition
-Write-Output "Started wc-service-employees-createposition, waiting 1 second..."
-Start-Sleep -Seconds 1
-
-# Start wc-service-registration-createadmin
-docker-compose -f $composeFile up -d wc-service-registration-createadmin
-Write-Output "Started wc-service-registration-createadmin, waiting 1 second..."
-Start-Sleep -Seconds 1
-
-# Start wc-service-authentication-authorizationadmin
-docker-compose -f $composeFile up -d wc-service-authentication-authorizationadmin
-Write-Output "Started wc-service-authentication-authorizationadmin."
-
-Write-Output "All services have been started sequentially."
-
-# Wait for user input to stop docker-compose services
-Write-Output "Press Enter to stop all docker-compose services..."
+Write-Output "`nPress Enter to stop all docker-compose services..."
 [System.Console]::ReadLine() | Out-Null
 
-# Stop docker-compose services
-docker-compose -f $composeFile stop
+Write-Output "Stopping all services..."
+docker-compose -f $composeBackendFile stop
+docker-compose -f $composeFrontendFile stop
 Write-Output "Docker-compose services have been stopped."
