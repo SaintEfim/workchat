@@ -4,12 +4,12 @@ networks:
 
 services:
   workchat-client:
-    image: saintefim/workchat-client-js:latest 
-    container_name: workchat-client-js
+    image: merk9ayt/workchat:latest
+    container_name: workchat-client
     ports:
-      - "4200:4200"
+      - "4200:80"
     environment:
       - NODE_ENV=production
-    restart: always
     networks:
       - workchat
+    restart: on-failure
